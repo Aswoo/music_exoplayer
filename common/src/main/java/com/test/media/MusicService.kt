@@ -180,6 +180,8 @@ open class MusicService : MediaBrowserServiceCompat() {
             connector.setQueueNavigator(UampQueueNavigator(mediaSession))
         }
 
+
+
         packageValidator = PackageValidator(this, R.xml.allowed_media_browser_callers)
     }
 
