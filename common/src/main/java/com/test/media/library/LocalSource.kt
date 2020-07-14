@@ -5,13 +5,19 @@ import android.content.Context
 import android.database.Cursor
 import android.net.Uri
 import android.provider.MediaStore
+import android.support.v4.media.MediaBrowserCompat
+import android.support.v4.media.MediaDescriptionCompat
 import android.support.v4.media.MediaMetadataCompat
+import com.bumptech.glide.Glide
+import com.bumptech.glide.RequestManager
+import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.request.RequestOptions
 import com.example.android.uamp.media.R
-import com.test.media.extensions.albumArtUri
-import com.test.media.extensions.displayIconUri
+import com.test.media.extensions.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 class LocalSource(private val context: Context, private val source: Uri) : AbstractMusicSource() {
 
@@ -45,21 +51,27 @@ class LocalSource(private val context: Context, private val source: Uri) : Abstr
             }
             musicCat.music.map { song ->
 
+
+                /*
                 // Block on downloading artwork.
                 val artFile = glide.applyDefaultRequestOptions(glideOptions)
-                    .downloadOnly()
+                    .asFile()
                     .load(song.image)
                     .submit(NOTIFICATION_LARGE_ICON_SIZE, NOTIFICATION_LARGE_ICON_SIZE)
                     .get()
 
+                 */
+
+
+
                 // Expose file via Local URI
-                val artUri = artFile.asAlbumArtContentUri()
+                //val artUri = artFile.asAlbumArtContentUri()
 
                 MediaMetadataCompat.Builder()
                     .from(song)
                     .apply {
-                        displayIconUri = artUri.toString() // Used by ExoPlayer and Notification
-                        albumArtUri = artUri.toString()
+                        displayIconUri = song.image // Used by ExoPlayer and Notification
+                        albumArtUri = song.image
                     }
                     .build()
             }.toList()
@@ -67,12 +79,12 @@ class LocalSource(private val context: Context, private val source: Uri) : Abstr
     }
 
 
-    fun fetchLocalMusicList(): LocalCatalog {
+    private fun fetchLocalMusicList(): LocalCatalog {
         // Initialize an empty mutable list of music
         val list: MutableList<LocalMusic> = mutableListOf()
 
-        // Get the internal storage media store audio uri
-        val uri: Uri = MediaStore.Audio.Media.INTERNAL_CONTENT_URI
+        // Get the external storage media store audio uri
+        val uri: Uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
 
         // IS_MUSIC : Non-zero if the audio file is music
         val selection = MediaStore.Audio.Media.IS_MUSIC + "!= 0"
@@ -110,7 +122,7 @@ class LocalSource(private val context: Context, private val source: Uri) : Abstr
                 val audioAlbumArt = ContentUris.withAppendedId(
                     Uri.parse("content://media/internal/audio/albumart"),
                     cursor.getColumnIndex(MediaStore.Audio.Media._ID).toLong() ?: -1
-                )
+                ).toString()
                 val audioTrackNumber: Long = cursor.getLong(trackNumber)
                 val audioDuration: Long = cursor.getLong(duration)
 
@@ -137,6 +149,39 @@ class LocalSource(private val context: Context, private val source: Uri) : Abstr
     }
 }
 
+fun MediaMetadataCompat.Builder.from(localMusic: LocalMusic): MediaMetadataCompat.Builder {
+    // The duration from the JSON is given in seconds, but the rest of the code works in
+    // milliseconds. Here's where we convert to the proper units.
+    val durationMs = TimeUnit.SECONDS.toMillis(localMusic.duration)
+
+    id = localMusic.id
+    title = localMusic.title
+    artist = localMusic.artist
+    album = localMusic.album
+    duration = durationMs
+    genre = localMusic.genre
+    mediaUri = localMusic.source
+    albumArtUri = localMusic.image
+    trackNumber = localMusic.trackNumber
+    trackCount = localMusic.totalTrackCount
+    flag = MediaBrowserCompat.MediaItem.FLAG_PLAYABLE
+
+    // To make things easier for *displaying* these, set the display properties as well.
+    displayTitle = localMusic.title
+    displaySubtitle = localMusic.artist
+    displayDescription = localMusic.album
+    displayIconUri = localMusic.image
+
+    // Add downloadStatus to force the creation of an "extras" bundle in the resulting
+    // MediaMetadataCompat object. This is needed to send accurate metadata to the
+    // media session during updates.
+    downloadStatus = MediaDescriptionCompat.STATUS_NOT_DOWNLOADED
+
+    // Allow it to be used in the typical builder style.
+    return this
+}
+
+
 class LocalCatalog(
     var music: List<LocalMusic> = ArrayList()
 )
@@ -150,7 +195,7 @@ class LocalMusic(
     var artist: String = "",
     var genre: String = "",
     var source: String = "",
-    var image: Uri,
+    var image: String = "",
     var trackNumber: Long = 0,
     var totalTrackCount: Long = 0,
     var duration: Long = -1,
