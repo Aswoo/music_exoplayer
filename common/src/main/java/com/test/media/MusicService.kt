@@ -38,12 +38,6 @@ import androidx.core.content.ContextCompat
 import androidx.media.MediaBrowserServiceCompat
 import com.example.android.uamp.media.*
 import com.test.media.extensions.flag
-import com.test.media.library.BrowseTree
-import com.test.media.library.JsonSource
-import com.test.media.library.MEDIA_SEARCH_SUPPORTED
-import com.test.media.library.MusicSource
-import com.test.media.library.UAMP_BROWSABLE_ROOT
-import com.test.media.library.UAMP_EMPTY_ROOT
 import com.google.android.exoplayer2.C
 import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.ExoPlayerFactory
@@ -54,6 +48,7 @@ import com.google.android.exoplayer2.ext.mediasession.MediaSessionConnector
 import com.google.android.exoplayer2.ext.mediasession.TimelineQueueNavigator
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.util.Util
+import com.test.media.library.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -156,7 +151,7 @@ open class MusicService : MediaBrowserServiceCompat() {
 
         // The media library is built from a remote JSON file. We'll create the source here,
         // and then use a suspend function to perform the download off the main thread.
-        mediaSource = JsonSource(context = this, source = remoteJsonSource)
+        mediaSource = LocalSource(context = this, source = remoteJsonSource)
         serviceScope.launch {
             mediaSource.load()
         }
@@ -179,6 +174,8 @@ open class MusicService : MediaBrowserServiceCompat() {
             connector.setPlaybackPreparer(playbackPreparer)
             connector.setQueueNavigator(UampQueueNavigator(mediaSession))
         }
+
+
 
         packageValidator = PackageValidator(this, R.xml.allowed_media_browser_callers)
     }
