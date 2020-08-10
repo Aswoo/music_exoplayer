@@ -52,21 +52,6 @@ class LocalSource(private val context: Context, private val source: Uri) : Abstr
             musicCat.music.map { song ->
 
 
-                /*
-                // Block on downloading artwork.
-                val artFile = glide.applyDefaultRequestOptions(glideOptions)
-                    .asFile()
-                    .load(song.image)
-                    .submit(NOTIFICATION_LARGE_ICON_SIZE, NOTIFICATION_LARGE_ICON_SIZE)
-                    .get()
-
-                 */
-
-
-
-                // Expose file via Local URI
-                //val artUri = artFile.asAlbumArtContentUri()
-
                 MediaMetadataCompat.Builder()
                     .from(song)
                     .apply {
@@ -109,9 +94,10 @@ class LocalSource(private val context: Context, private val source: Uri) : Abstr
             val album: Int = cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM)
             var artist: Int = cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST)
             var genre: Int = 0
-            var source: Int = 0
+            var source: Int = cursor.getColumnIndex(MediaStore.Audio.Media.DATA)
             var trackNumber: Int = cursor.getColumnIndex(MediaStore.Audio.Media.TRACK)
             var duration: Int = cursor.getColumnIndex(MediaStore.Audio.Media.DURATION)
+            val albumArtId : Int = cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID)
 
             // Now loop through the music file
             do {
@@ -119,10 +105,12 @@ class LocalSource(private val context: Context, private val source: Uri) : Abstr
                 val audioTitle: String = cursor.getString(title)
                 val audioAlbum: String = cursor.getString(album)
                 val audioArtist: String = cursor.getString(artist)
+                val albumId = cursor.getLong(albumArtId)
                 val audioAlbumArt = ContentUris.withAppendedId(
-                    Uri.parse("content://media/internal/audio/albumart"),
-                    cursor.getColumnIndex(MediaStore.Audio.Media._ID).toLong() ?: -1
+                    Uri.parse("content://media/external/audio/albumart"),
+                    albumId ?: -1
                 ).toString()
+                val albumSource = cursor.getString(source)
                 val audioTrackNumber: Long = cursor.getLong(trackNumber)
                 val audioDuration: Long = cursor.getLong(duration)
 
@@ -134,7 +122,7 @@ class LocalSource(private val context: Context, private val source: Uri) : Abstr
                         album = audioAlbum,
                         artist = audioArtist,
                         genre = "",
-                        source = "",
+                        source = albumSource,
                         image = audioAlbumArt,
                         trackNumber = audioTrackNumber,
                         totalTrackCount = 0,

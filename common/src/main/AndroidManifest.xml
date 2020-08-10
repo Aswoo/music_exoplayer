@@ -24,6 +24,7 @@
 
     <application>
 
+
         <!--
              MediaSession, prior to API 21, uses a broadcast receiver to communicate with a
              media session. It does not have to be this broadcast receiver, but it must
